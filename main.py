@@ -28,28 +28,9 @@ def path_test():
 # Test if paths are correct
     for csv_path in csv_data_path:
         print(csv_path)
-
-    # Test what's in the csv file
-    csv_file = csv_data_path[video_number]
-    position_data = pd.read_csv(csv_file, header=1) 
-    print(position_data.columns)
-
-    # Test a specific label in csv file
-    label_point = position_data[label] 
-    print(label_point)
-    label_point = pd.to_numeric(label_point, errors='coerce')  # Convert to numeric, coercing errors to NaN
-    label_point = label_point.dropna()  # Removes NaN values for plotting
-    print(label_point)
-    label_point = label_point.sort_values(ascending=True)
-    print(label_point)
-
-    # Test a plot of a specific label
-    plt.plot(label_point)
-    plt.title('Position Over Time')
-    plt.xlabel('Time (frames)')
-    plt.ylabel('Position')
-    plt.show()
-
+        position_data = pd.read_csv(csv_path, header=0)
+        print(position_data)
+path_test()
 #Function to convert the date from the yaml file into seconds
 def conversion_date_in_seconds(date):
     date_str = str(date)
@@ -94,7 +75,7 @@ def calculate_angle(X_point1, X_point2, X_point3,
         angle_degrees = np.degrees(angle)
         return angle_degrees
     else:
-        return 0  # Default angle if one vector is zero-length
+        return 0  
   
 
 # Function to get the movement time of multiple movements from yaml files
@@ -171,16 +152,18 @@ def trajectory_one_movement(index1, index2, csv_file, cote) :
         
 
     # Read the CSV file
-    position_data = pd.read_csv(csv_file, header=1, low_memory=False)
+    position_data = pd.read_csv(csv_file, header=0, low_memory=False)
     if cote.upper() == 'L':
-        x_col = 'JindexL'
-        y_col = 'JindexL.1'
-        z_col = 'JindexL.2' if 'JindexL.2' in position_data.columns else None
+        x_col = 'JindexL_x'
+        y_col = 'JindexL_y'
+        z_col = 'JindexL_z' 
     elif cote.upper() == 'R':
-        x_col = 'JindexR'
-        y_col = 'JindexR.1'
-        z_col = 'JindexR.2' if 'JindexR.2' in position_data.columns else None
-
+        x_col = 'JindexR_x'
+        y_col = 'JindexR_y'
+        z_col = 'JindexR_z' 
+    print(position_data.columns)
+    print(f"Columns used for trajectory calculation: {x_col}, {y_col}, {z_col if z_col else 'None'}")
+    print(position_data[x_col])
     position_data[x_col] = pd.to_numeric(position_data[x_col], errors='coerce')
     position_data[y_col] = pd.to_numeric(position_data[y_col], errors='coerce')
     X_point1 = position_data[x_col] 
@@ -290,29 +273,29 @@ def grasp_distance(index1, index2, csv_file):
         print("No valid movement time found in the YAML file.")
 
       # Read the CSV file
-    position_data = pd.read_csv(csv_file, header=1, low_memory=False)
+    position_data = pd.read_csv(csv_file, header=0, low_memory=False)
     handUsed = yaml_data.get('param', {}).get('main', 'Unknown')
     if handUsed == 'LEFT':
-        x_col = 'JindexL'
-        y_col = 'JindexL.1'
-        x2_col = 'JthumbL'
-        y2_col = 'JthumbL.1'
-        x3_col = 'wrist1L'
-        y3_col = 'wrist1L.1'
-        z_col = 'JindexL.2' if 'JindexL.2' in position_data.columns else None
-        z2_col = 'JthumbL.2' if 'JthumbL.2' in position_data.columns else None
-        z3_col = 'JwristL.2' if 'JwristL.2' in position_data.columns else None
+        x_col = 'JindexL_x'
+        y_col = 'JindexL_y'
+        x2_col = 'JthumbL_x'
+        y2_col = 'JthumbL_y'
+        x3_col = 'wrist1L_x'
+        y3_col = 'wrist1L_y'
+        z_col = 'JindexL_z' 
+        z2_col = 'JthumbL_z' 
+        z3_col = 'wrist1L_z' 
         
     elif handUsed == 'RIGHT':
-        x_col = 'JindexR'
-        y_col = 'JindexR.1'
-        x2_col = 'JthumbR'
-        y2_col = 'JthumbR.1'
-        x3_col = 'wrist1R'
-        y3_col = 'wrist1R.1'
-        z_col = 'JindexR.2' if 'JindexR.2' in position_data.columns else None
-        z2_col = 'JthumbR.2' if 'JthumbR.2' in position_data.columns else None
-        z3_col = 'JwristR.2' if 'JwristR.2' in position_data.columns else None
+        x_col = 'JindexR_x'
+        y_col = 'JindexR_y'
+        x2_col = 'JthumbR_x'
+        y2_col = 'JthumbR_y'
+        x3_col = 'wrist1R_x'
+        y3_col = 'wrist1R_y'
+        z_col = 'JindexR_z' 
+        z2_col = 'JthumbR_z' 
+        z3_col = 'wrist1R_z' 
 
     position_data[x_col] = pd.to_numeric(position_data[x_col], errors='coerce')
     position_data[y_col] = pd.to_numeric(position_data[y_col], errors='coerce')
@@ -395,18 +378,18 @@ def wrist_distance(index1, index2, csv_file):
         print("No valid movement time found in the YAML file.")
 
     # Read the CSV file
-    position_data = pd.read_csv(csv_file, header=1, low_memory=False)
+    position_data = pd.read_csv(csv_file, header=0, low_memory=False)
     handUsed = yaml_data.get('param', {}).get('main', 'Unknown')
     if handUsed == 'LEFT':
-        x_col = 'wrist1L'
-        y_col = 'wrist1L.1'
-        x2_col = 'wrist2L'
-        y2_col = 'wrist2L.1'
+        x_col = 'wrist1L_x'
+        y_col = 'wrist1L_y'
+        x2_col = 'wrist2L_x'
+        y2_col = 'wrist2L_y'
     elif handUsed == 'RIGHT':
-        x_col = 'wrist1R'
-        y_col = 'wrist1R.1'
-        x2_col = 'wrist2R'
-        y2_col = 'wrist2R.1'
+        x_col = 'wrist1R_x'
+        y_col = 'wrist1R_y'
+        x2_col = 'wrist2R_x'
+        y2_col = 'wrist2R_y'
 
     position_data[x_col] = pd.to_numeric(position_data[x_col], errors='coerce')
     position_data[y_col] = pd.to_numeric(position_data[y_col], errors='coerce')
