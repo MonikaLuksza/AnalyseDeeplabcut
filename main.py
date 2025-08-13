@@ -424,15 +424,14 @@ def wrist_distance(index1, index2, csv_file):
 
 
 
-
-# Test of the trajectory length function 
-#get_mvtTime_yaml(0, 100)
-all_trials = []
-for i in range(50):
-    trajectory_one_movement(i, i+1, csv_data_path[0], 'L')  
-    trajectory_one_movement(i, i+1, csv_data_path[0], 'R')
-    grasp_distance(i, i+1, csv_data_path[0])
-    wrist_distance(i, i+1, csv_data_path[0])
+if __name__ == "__main__": 
+    # Test of the trajectory length function if main.py is explicitly called 
+    all_trials = []
+    for i in range(50):
+        trajectory_one_movement(i, i+1, csv_data_path[0], 'L')  
+        trajectory_one_movement(i, i+1, csv_data_path[0], 'R')
+        grasp_distance(i, i+1, csv_data_path[0])
+        wrist_distance(i, i+1, csv_data_path[0])
 
 #For figure plotting
     #all_trials.append(speeds)
@@ -447,8 +446,8 @@ for i in range(50):
 #plt.grid(True)
 #plt.show()
 
-# Sauvegarde des resultats dans fichier csv
-results_df = pd.DataFrame(results)
-output_csv_path = Path(project_folder) / "TEST_CODE_diff_angle_.csv"
-results_df.to_csv(output_csv_path, index=False)
-print(f"Saving...: {output_csv_path}")
+    # Sauvegarde des resultats dans fichier csv
+    results_df = pd.DataFrame(results)
+    output_csv_path = Path(project_folder) / "TEST_CODE_diff_angle_.csv"
+    results_df.to_csv(output_csv_path, index=False)
+    print(f"Saving...: {output_csv_path}")
