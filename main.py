@@ -9,11 +9,11 @@ from UI_inputs import get_user_input
 results = []
 
 # Get user input for paths and labels
-project_folder, video_folder, csv_folder, yaml_folder, labels = get_user_input()
+project_folder, csv_folder, yaml_folder, labels = get_user_input()
 
 # Relevant paths
 # Should I just load one video at a time?
-video_path = list(video_folder.rglob("*.avi"))
+#video_path = list(video_folder.rglob("*.avi"))
 csv_data_path = list(csv_folder.rglob("*.csv"))
 
 # Relevant paths specific to Machu trials: pre and post lesion
@@ -138,6 +138,7 @@ def trajectory_one_movement(index1, index2, csv_file, cote) :
     if (get_oneMvtTime_yaml(index1, index2)[1] is not None):
         tempsDebutMvt = conversion_date_in_seconds(get_oneMvtTime_yaml(index1, index2)[0])
         print(f"Time of beginning of movement: {tempsDebutMvt}")
+        print(f"Time of beginning of movement in seconds: {tempsDebutMvt - tempsDebutVideo}")
         tempsFinMvt = get_oneMvtTime_yaml(index1, index2)[1] + tempsDebutMvt
         print(f"Time of end of movement: {tempsFinMvt}")
         tempsMvt = tempsFinMvt - tempsDebutMvt
@@ -175,7 +176,7 @@ def trajectory_one_movement(index1, index2, csv_file, cote) :
     else:
         Z_point1 = None
 
-    for i in range(indexDebutMvt, indexFinMvt + 1):
+    for i in range(indexDebutMvt, indexFinMvt + 2):
         if i > 0 and pd.notna(X_point1[i]) and pd.notna(Y_point1[i]) and pd.notna(X_point1[i - 1]) and pd.notna(Y_point1[i - 1]):
             x_prev, y_prev = X_point1[i - 1], Y_point1[i - 1]
             x_curr, y_curr = X_point1[i], Y_point1[i]
@@ -213,8 +214,8 @@ def trajectory_one_movement(index1, index2, csv_file, cote) :
         'csv_file': Path(csv_file).name,
         'movement_start_index': indexDebutMvt,
         'movement_end_index': indexFinMvt,
-        'start_time_s': tempsDebutMvt,
-        'end_time_s': tempsFinMvt,
+        'start_time': tempsDebutMvt - tempsDebutVideo,
+        'end_time': tempsFinMvt - tempsDebutVideo,
         'duration_s': tempsMvt,
         'movement_distance': mvtDistance,
         'speed': mvtDistance / tempsMvt if tempsMvt > 0 else 0,
@@ -448,6 +449,6 @@ for i in range(50):
 
 # Sauvegarde des resultats dans fichier csv
 results_df = pd.DataFrame(results)
-output_csv_path = Path(project_folder) / "TEST_CODE.csv"
+output_csv_path = Path(project_folder) / "TEST_CODE_diff_angle_.csv"
 results_df.to_csv(output_csv_path, index=False)
 print(f"Saving...: {output_csv_path}")

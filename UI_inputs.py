@@ -19,12 +19,12 @@ def get_user_input():
         project_folder = config_path
 
     # Prompt for video folder
-    video_folder = filedialog.askdirectory(title="Select Videos Folder")
-    if not video_folder:
-        print("No folder selected for videos: using default path")
-        video_folder = config_path / "videos"
-    else: 
-        video_folder = Path(video_folder)
+    #video_folder = filedialog.askdirectory(title="Select Videos Folder")
+    #if not video_folder:
+    #    print("No folder selected for videos: using default path")
+    #    video_folder = config_path / "videos"
+    #else: 
+    #    video_folder = Path(video_folder)
 
     # Prompt for CSV folder
     csv_folder = filedialog.askdirectory(title="Select CSV Data Folder")
@@ -54,4 +54,4 @@ def get_user_input():
     else:
         labels = [label.strip() for label in labels.split(',')]
     
-    return Path(project_folder), Path(video_folder), Path(csv_folder), Path(yaml_folder), labels
+    return Path(project_folder), Path(csv_folder), Path(yaml_folder), labels
