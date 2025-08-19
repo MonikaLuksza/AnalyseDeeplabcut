@@ -35,7 +35,7 @@ def get_oneMvtTime_yaml(index1=0, index2=1):
             yaml_data = yaml.safe_load(file)
             
         heureMvt = yaml_data.get('date').split('@')[1]
-        totalMvtTime = float(yaml_data.get('matlab_data', {}).get('grasp_offset', 0)) #+ int(yaml_data.get('matlab_data', {}).get('delayReward', 0))
+        totalMvtTime = float(yaml_data.get('matlab_data', {}).get('grasp_onset', 0)) #+ int(yaml_data.get('matlab_data', {}).get('delayReward', 0))
 
         if (yaml_data.get('matlab_data', {}).get('state') !=0):
             return heureMvt, float(totalMvtTime/1000)
@@ -119,7 +119,9 @@ def wrist_distance(index1, index2, csv_file):
         'Wrist X distance at the beginning': beginningDistanceX,
         'Wrist X distance at the end': endDistanceX,
         'Wrist Y distance at the beginning': beginningDistanceY,
-        'Wrist Y distance at the end': endDistanceY
+        'Wrist Y distance at the end': endDistanceY,
+        'Knuckles position at the beginning': (X_point1[indexBeginningMvt], Y_point1[indexBeginningMvt], X_point2[indexBeginningMvt], Y_point2[indexBeginningMvt]),
+        'Hand reaching': yaml_data.get('param', {}).get('main', 'Unknown')
     })   
 
 # Test of the trajectory length function 

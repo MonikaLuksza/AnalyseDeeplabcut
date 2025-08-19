@@ -106,11 +106,17 @@ def get_oneMvtTime_yaml(index1=0, index2=1):
             
         heureMvt = yaml_data.get('date').split('@')[1]
         totalMvtTime = float(yaml_data.get('matlab_data', {}).get('grasp_offset', 0)) #+ int(yaml_data.get('matlab_data', {}).get('delayReward', 0))
-
-        if (yaml_data.get('matlab_data', {}).get('state') !=0):
-            return heureMvt, float(totalMvtTime/1000)
-        else :
-            return heureMvt, None
+        if totalMvtTime == 0:
+            totalMvt = get_oneMvtTime_yaml(index1+1, index2+1)[0] 
+            print(f"Total movement time: {totalMvt}")
+            print(conversion_date_in_seconds(totalMvt))
+            print(conversion_date_in_seconds(heureMvt))
+            totalMvtTime = (conversion_date_in_seconds(totalMvt) - conversion_date_in_seconds(heureMvt))*1000
+        return heureMvt, float(totalMvtTime/1000)
+        #if (yaml_data.get('matlab_data', {}).get('state') !=0):
+        #    return heureMvt, float(totalMvtTime/1000)
+        #else :
+          #  return heureMvt, None
 
 #Function to calculate the trajectory length of one movement
 def trajectory_one_movement(index1, index2, csv_file, cote) :  
@@ -128,7 +134,7 @@ def trajectory_one_movement(index1, index2, csv_file, cote) :
     first_yaml_file = yaml_baseline_path[0]
     with open(first_yaml_file, "r") as file:
         yaml_data = yaml.safe_load(file)
-        tempsDebutVideo = conversion_date_in_seconds(yaml_data.get('date').split('@')[1])
+        tempsDebutVideo = conversion_date_in_seconds(yaml_data.get('date').split('@')[1])      
         print (f"Video start time: {tempsDebutVideo}")
 
     for yaml_file in yaml_baseline_path[index1:index2]:
@@ -136,7 +142,7 @@ def trajectory_one_movement(index1, index2, csv_file, cote) :
             yaml_data = yaml.safe_load(file)
 
     if (get_oneMvtTime_yaml(index1, index2)[1] is not None):
-        tempsDebutMvt = conversion_date_in_seconds(get_oneMvtTime_yaml(index1, index2)[0])
+        tempsDebutMvt = conversion_date_in_seconds(get_oneMvtTime_yaml(index1, index2)[0]) #+ 3.6626
         print(f"Time of beginning of movement: {tempsDebutMvt}")
         print(f"Time of beginning of movement in seconds: {tempsDebutMvt - tempsDebutVideo}")
         tempsFinMvt = get_oneMvtTime_yaml(index1, index2)[1] + tempsDebutMvt
@@ -212,6 +218,7 @@ def trajectory_one_movement(index1, index2, csv_file, cote) :
     # Sauvegarde dans resultats
     results.append({
         'csv_file': Path(csv_file).name,
+        'state': yaml_data.get('matlab_data', {}).get('state', 'Unknown'), 
         'movement_start_index': indexDebutMvt,
         'movement_end_index': indexFinMvt,
         'start_time': tempsDebutMvt - tempsDebutVideo,
@@ -240,12 +247,18 @@ def grasp_distance(index1, index2, csv_file):
     timeEndGrasp = 0
     timeGrasp = 0
     mvtDistance = 0
-    angle = 0
+    angleWrist = 0
+    angleTotalWrist = 0
+    angleSummaryWrist = 0
+    angleThumb = 0
+    angleTotalThumb = 0
+    angleSummaryThumb = 0
+    global grasp_distances
     
     first_yaml_file = yaml_baseline_path[0]
     with open(first_yaml_file, "r") as file:
         yaml_data = yaml.safe_load(file)
-        timeBeginningVideo = conversion_date_in_seconds(yaml_data.get('date').split('@')[1])
+        timeBeginningVideo = conversion_date_in_seconds(yaml_data.get('date').split('@')[1]) #+ 6.9804       #Adjust according to delay between recording and camera start
         print (f"Video start time: {timeBeginningVideo}")
 
     for yaml_file in yaml_baseline_path[index1:index2]:
@@ -253,9 +266,9 @@ def grasp_distance(index1, index2, csv_file):
             yaml_data = yaml.safe_load(file)
 
     if (get_oneMvtTime_yaml(index1, index2)[1] is not None):
-        timeBeginningMvt = conversion_date_in_seconds(get_oneMvtTime_yaml(index1, index2)[0])
+        timeBeginningMvt = conversion_date_in_seconds(get_oneMvtTime_yaml(index1, index2)[0]) + 6.9804
         print(f"Time of the beginning of movement: {timeBeginningMvt}")
-        timeBeginningGrasp = timeBeginningMvt + float((yaml_data.get('matlab_data', {}).get('cueOn', 'Unknown'))/1000)
+        timeBeginningGrasp = timeBeginningMvt + float((yaml_data.get('matlab_data', {}).get('exitHP', 'Unknown'))/1000)
         print(f"Time of the beginning of grasp: {timeBeginningGrasp}")
         timeEndMvt = get_oneMvtTime_yaml(index1, index2)[1] + timeBeginningMvt
         print(f"Time of the end of movement: {timeEndMvt}")
@@ -286,6 +299,9 @@ def grasp_distance(index1, index2, csv_file):
         z_col = 'JindexL_z' 
         z2_col = 'JthumbL_z' 
         z3_col = 'wrist1L_z' 
+        x4_col = 'thumbL_x'
+        y4_col = 'thumbL_y'
+        z4_col = 'thumbL_z'
         
     elif handUsed == 'RIGHT':
         x_col = 'JindexR_x'
@@ -297,6 +313,9 @@ def grasp_distance(index1, index2, csv_file):
         z_col = 'JindexR_z' 
         z2_col = 'JthumbR_z' 
         z3_col = 'wrist1R_z' 
+        x4_col = 'thumbR_x'
+        y4_col = 'thumbR_y'
+        z4_col = 'thumbR_z'
 
     position_data[x_col] = pd.to_numeric(position_data[x_col], errors='coerce')
     position_data[y_col] = pd.to_numeric(position_data[y_col], errors='coerce')
@@ -310,24 +329,32 @@ def grasp_distance(index1, index2, csv_file):
     position_data[y3_col] = pd.to_numeric(position_data[y3_col], errors='coerce')
     X_point3 = position_data[x3_col]
     Y_point3 = position_data[y3_col]
+    position_data[x4_col] = pd.to_numeric(position_data[x4_col], errors='coerce')
+    position_data[y4_col] = pd.to_numeric(position_data[y4_col], errors='coerce')
+    X_point4 = position_data[x4_col]
+    Y_point4 = position_data[y4_col]
 
-    if z_col is not None and z2_col is not None and z3_col is not None:
+    if z_col is not None and z2_col is not None and z3_col is not None and z4_col is not None:
         position_data[z_col] = pd.to_numeric(position_data[z_col], errors='coerce')
         position_data[z2_col] = pd.to_numeric(position_data[z2_col], errors='coerce')
         position_data[z3_col] = pd.to_numeric(position_data[z3_col], errors='coerce')
+        position_data[z4_col] = pd.to_numeric(position_data[z4_col], errors='coerce')
         Z_point1 = position_data[z_col] 
         Z_point2 = position_data[z2_col] 
         Z_point3 = position_data[z3_col]
+        Z_point4 = position_data[z4_col]
     else:
         Z_point1 = None
         Z_point2 = None
         Z_point3 = None
+        Z_point4 = None
 
     for i in range(indexBeginningGrasp + 1, indexEndGrasp):
         if i > 0 and pd.notna(X_point1[i]) and pd.notna(Y_point1[i]) and pd.notna(X_point1[i - 1]) and pd.notna(Y_point1[i - 1]):
             z1 = Z_point1[i] if 'Z_point1' in locals() and Z_point1 is not None else None
             z2 = Z_point2[i] if 'Z_point2' in locals() and Z_point2 is not None else None
             z3 = Z_point3[i] if 'Z_point3' in locals() and Z_point3 is not None else None
+            z4 = Z_point4[i] if 'Z_point4' in locals() and Z_point4 is not None else None
 
             # Calculate grasping distance
             distance = calculate_distance(X_point1[i], X_point2[i], Y_point1[i], Y_point2[i], z1, z2)
@@ -337,101 +364,50 @@ def grasp_distance(index1, index2, csv_file):
             print(f"Total grasping movement distance: {mvtDistance}")
             print(f"Average grasping distance: {averageDistance}")
 
-            # Calculate angle (extended to support Z if needed)
-            angle = calculate_angle(
+            grasp_distances.append({
+                'frame_index': i,
+                'distance_cm': distance
+            })
+
+            # Calculate angle using the wrist
+            angleWrist = calculate_angle(
                 X_point1[i], X_point2[i], X_point3[i],
                 Y_point1[i], Y_point2[i], Y_point3[i],
                 z1, z2, z3
             )
-            print(f"Angle between index and thumb: {angle} degrees")
+            angleTotalWrist += angleWrist
+            angleSummaryWrist = angleTotalWrist / (indexEndGrasp - indexBeginningGrasp)
+            print(f"Angle between index and thumb considering the wrist: {angleWrist} degrees")
+
+            # Calculate angle using the thumb
+            angleThumb = calculate_angle(
+                X_point1[i], X_point2[i], X_point4[i],
+                Y_point1[i], Y_point2[i], Y_point4[i],
+                z1, z2, z4,
+            )
+            angleTotalThumb += angleThumb
+            angleSummaryThumb = angleTotalThumb / (indexEndGrasp - indexBeginningGrasp)
+            print(f"Angle between index and thumb considering the wrist: {angleThumb} degrees")
 
     # Sauvegarde dans resultats
     results.append({
         'Grasping distance': averageDistance,
-        'Grasping angle': angle
+        'Grasping angle using wrist': angleSummaryWrist,
+        'Grasping angle using thumb': angleSummaryThumb,
+        'hand reaching': yaml_data.get('param', {}).get('main', 'Unknown'),
+        'angle of reach': yaml_data.get('param', {}).get('angles', 'Unknown'),
+        'type of task': yaml_data.get('param', {}).get('tache', 'Unknown'),
     })
-
-# Function to see the distance between the wrist positions
-def wrist_distance(index1, index2, csv_file):
-    endDistance = 0
-    beginningDistance = 0
-    timeBeginningMvt = 0
-    timeEndMvt = 0
-    indexBeginningMvt = 0
-    indexEndMvt = 0
-    timeMvt = 0
-    
-    first_yaml_file = yaml_baseline_path[0]
-    with open(first_yaml_file, "r") as file:
-        yaml_data = yaml.safe_load(file)
-        timeBeginningVideo = conversion_date_in_seconds(yaml_data.get('date').split('@')[1])
-
-    for yaml_file in yaml_baseline_path[index1:index2]:
-        with open(yaml_file, "r") as file:
-            yaml_data = yaml.safe_load(file)
-
-    if (get_oneMvtTime_yaml(index1, index2)[1] is not None):
-        timeBeginningMvt = conversion_date_in_seconds(get_oneMvtTime_yaml(index1, index2)[0])
-        timeEndMvt = get_oneMvtTime_yaml(index1, index2)[1] + timeBeginningMvt
-        timeMvt = timeEndMvt - timeBeginningMvt
-
-    else:
-        print("No valid movement time found in the YAML file.")
-
-    # Read the CSV file
-    position_data = pd.read_csv(csv_file, header=0, low_memory=False)
-    handUsed = yaml_data.get('param', {}).get('main', 'Unknown')
-    if handUsed == 'LEFT':
-        x_col = 'wrist1L_x'
-        y_col = 'wrist1L_y'
-        x2_col = 'wrist2L_x'
-        y2_col = 'wrist2L_y'
-    elif handUsed == 'RIGHT':
-        x_col = 'wrist1R_x'
-        y_col = 'wrist1R_y'
-        x2_col = 'wrist2R_x'
-        y2_col = 'wrist2R_y'
-
-    position_data[x_col] = pd.to_numeric(position_data[x_col], errors='coerce')
-    position_data[y_col] = pd.to_numeric(position_data[y_col], errors='coerce')
-    X_point1 = position_data[x_col] 
-    Y_point1 = position_data[y_col] 
-    position_data[x2_col] = pd.to_numeric(position_data[x2_col], errors='coerce')
-    position_data[y2_col] = pd.to_numeric(position_data[y2_col], errors='coerce')
-    X_point2 = position_data[x2_col] 
-    Y_point2 = position_data[y2_col] 
-
-    indexBeginningMvt = int((timeBeginningMvt-timeBeginningVideo) * 10)
-    print(f"Index of beginning of movement: {indexBeginningMvt}")
-    indexEndMvt = int((timeMvt) * 10) + indexBeginningMvt
-    print(f"Index of end of movement: {indexEndMvt}")
-
-    num_points = len(position_data)
-    for i in range(indexBeginningMvt, min(indexEndMvt+1, num_points)):
-        print(f"Index: {i}")
-        if i==indexBeginningMvt and i>0 and pd.notna(X_point1[i]) and pd.notna(Y_point1[i]) and pd.notna(X_point1[i - 1]) and pd.notna(Y_point1[i - 1]):
-            beginningDistance = calculate_distance(X_point1[i], X_point2[i], Y_point1[i], Y_point2[i])
-            print(f"Wrist distance at beginning: {beginningDistance}")
-        if i==min(indexEndMvt, num_points-1) and i>0 and pd.notna(X_point1[i]) and pd.notna(Y_point1[i]) and pd.notna(X_point1[i - 1]) and pd.notna(Y_point1[i - 1]):
-            endDistance = calculate_distance(X_point1[i], X_point2[i], Y_point1[i], Y_point2[i])
-            print(f"Wrist distance at end: {endDistance}")
-
-    # Sauvegarde dans resultats
-    results.append({
-        'Wrist distance at the beginning': beginningDistance,
-        'Wrist distance at the end': endDistance
-    })   
-
 
 
 if __name__ == "__main__": 
     # Test of the trajectory length function if main.py is explicitly called 
     all_trials = []
-    for i in range(50):
-        trajectory_one_movement(i, i+1, csv_data_path[0], 'L')  
-        trajectory_one_movement(i, i+1, csv_data_path[0], 'R')
+    grasp_distances = []
+    for i in range(100):
+        #trajectory_one_movement(i, i+1, csv_data_path[0], 'L')  
+        #trajectory_one_movement(i, i+1, csv_data_path[0], 'R')
         grasp_distance(i, i+1, csv_data_path[0])
-        wrist_distance(i, i+1, csv_data_path[0])
 
 #For figure plotting
     #all_trials.append(speeds)
@@ -448,6 +424,10 @@ if __name__ == "__main__":
 
     # Sauvegarde des resultats dans fichier csv
     results_df = pd.DataFrame(results)
-    output_csv_path = Path(project_folder) / "TEST_CODE_diff_angle_.csv"
+    output_csv_path = Path(project_folder) / "ANGLE_PoST_wristandthumb.csv"
     results_df.to_csv(output_csv_path, index=False)
     print(f"Saving...: {output_csv_path}")
+    grasp_distances_df = pd.DataFrame(grasp_distances)
+    grasp_distances_output_path = Path(project_folder) / "grasp_distances.csv"
+    grasp_distances_df.to_csv(grasp_distances_output_path, index=False)
+    print(f"Grasp distances saved to: {grasp_distances_output_path}")
