@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import yaml
 from pathlib import Path 
+import math
 
 # Results storage
 results = []
@@ -26,6 +27,39 @@ def calculate_distance(x1, x2, y1, y2, z1=None, z2=None):
     else:
         return np.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
 
+
+def calculate_rotation_angle(x1_start, y1_start, x2_start, y2_start,
+                             x1_end, y1_end, x2_end, y2_end):
+    # Create start and end vectors
+    dx_start = x2_start - x1_start
+    dy_start = y2_start - y1_start
+    dx_end = x2_end - x1_end
+    dy_end = y2_end - y1_end
+
+    # Compute dot and cross products
+    dot_product = dx_start * dx_end + dy_start * dy_end
+    cross_product = dx_start * dy_end - dy_start * dx_end
+
+    # Compute magnitudes
+    magnitude_start = math.sqrt(dx_start**2 + dy_start**2)
+    magnitude_end = math.sqrt(dx_end**2 + dy_end**2)
+
+    # Avoid division by zero
+    if magnitude_start == 0 or magnitude_end == 0:
+        return None  # Invalid vectors
+
+    # Clamp to avoid math domain error
+    cos_theta = max(min(dot_product / (magnitude_start * magnitude_end), 1.0), -1.0)
+
+    angle_rad = math.acos(cos_theta)
+    angle_deg = math.degrees(angle_rad)
+
+    # Determine direction using cross product
+    if cross_product < 0:
+        angle_deg = -angle_deg  # Clockwise
+
+    return angle_deg 
+
 # Function to get the time of one movement from yaml files
 def get_oneMvtTime_yaml(index1=0, index2=1): 
     heureMvt = 0
@@ -45,14 +79,22 @@ def get_oneMvtTime_yaml(index1=0, index2=1):
 # Function to see the distance between the wrist positions
 def wrist_distance(index1, index2, csv_file):
     endDistanceX = 0
+    endDistance2X = 0
     beginningDistanceX = 0
+    beginningDistance2X = 0
     endDistanceY = 0
+    endDistance2Y = 0
     beginningDistanceY = 0
+    beginningDistance2Y = 0
+    angle_deg = 0
+    angle_deg2 = 0
     timeBeginningMvt = 0
     timeEndMvt = 0
     indexBeginningMvt = 0
     indexEndMvt = 0
     timeMvt = 0
+    indexBeginningReach = 0
+    indexEndReach = 0
     
     first_yaml_file = yaml_baseline_path[0]
     with open(first_yaml_file, "r") as file:
@@ -80,11 +122,19 @@ def wrist_distance(index1, index2, csv_file):
         y_col = 'wrist1L_y'
         x2_col = 'wrist2L_x'
         y2_col = 'wrist2L_y'
+        x3_col = 'indexL_x'
+        y3_col = 'indexL_y'
+        x4_col = 'f1L_x'
+        y4_col = 'f1L_y'
     elif handUsed == 'RIGHT':
         x_col = 'wrist1R_x'
         y_col = 'wrist1R_y'
         x2_col = 'wrist2R_x'
         y2_col = 'wrist2R_y'
+        x3_col = 'indexR_x'
+        y3_col = 'indexR_y'
+        x4_col = 'f1R_x'
+        y4_col = 'f1R_y'
 
     position_data[x_col] = pd.to_numeric(position_data[x_col], errors='coerce')
     position_data[y_col] = pd.to_numeric(position_data[y_col], errors='coerce')
@@ -94,40 +144,83 @@ def wrist_distance(index1, index2, csv_file):
     position_data[y2_col] = pd.to_numeric(position_data[y2_col], errors='coerce')
     X_point2 = position_data[x2_col] 
     Y_point2 = position_data[y2_col] 
+    position_data[x3_col] = pd.to_numeric(position_data[x3_col], errors='coerce')
+    position_data[y3_col] = pd.to_numeric(position_data[y3_col], errors='coerce')
+    X_point3 = position_data[x3_col]
+    Y_point3 = position_data[y3_col]
+    position_data[x4_col] = pd.to_numeric(position_data[x4_col], errors='coerce')
+    position_data[y4_col] = pd.to_numeric(position_data[y4_col], errors='coerce')
+    X_point4 = position_data[x4_col]
+    Y_point4 = position_data[y4_col]
 
-    indexBeginningMvt = int((timeBeginningMvt-timeBeginningVideo) * 10)
-    print(f"Index of beginning of movement: {indexBeginningMvt}")
-    indexEndMvt = int((timeMvt) * 10) + indexBeginningMvt
-    print(f"Index of end of movement: {indexEndMvt}")
+    if timeBeginningMvt != 0:
+        indexBeginningMvt = int((timeBeginningMvt-timeBeginningVideo) * 10)
+        print(f"Index of beginning of movement: {indexBeginningMvt}")
+        timeBeginningReach = timeBeginningMvt + float((yaml_data.get('matlab_data', {}).get('exitHP', 'Unknown'))/1000)
+        indexBeginningReach = int((timeBeginningReach - timeBeginningVideo) * 10)
+        indexEndMvt = int((timeMvt) * 10) + indexBeginningMvt
+        timeEndReach = timeBeginningMvt + float((yaml_data.get('matlab_data', {}).get('grasp_onset', 'Unknown'))/1000)
+        indexEndReach = int((timeEndReach - timeBeginningVideo) * 10)
+        print(f"Index of end of movement: {indexEndMvt}")
 
     num_points = len(position_data)
     for i in range(indexBeginningMvt, min(indexEndMvt+1, num_points)):
         print(f"Index: {i}")
-        if i==indexBeginningMvt and i>0 and pd.notna(X_point1[i]) and pd.notna(Y_point1[i]) and pd.notna(X_point1[i - 1]) and pd.notna(Y_point1[i - 1]):
+        if i==indexBeginningReach and i>0 and pd.notna(X_point1[i]) and pd.notna(Y_point1[i]) and pd.notna(X_point1[i - 1]) and pd.notna(Y_point1[i - 1]):
             beginningDistanceX = calculate_distance(X_point1[i], X_point2[i], 0, 0)
             beginningDistanceY = calculate_distance(0, 0, Y_point1[i], Y_point2[i])
             print(f"Wrist X distance at beginning: {beginningDistanceX}")
             print(f"Wrist Y distance at beginning: {beginningDistanceY}")
-        if i==min(indexEndMvt, num_points-1) and i>0 and pd.notna(X_point1[i]) and pd.notna(Y_point1[i]) and pd.notna(X_point1[i - 1]) and pd.notna(Y_point1[i - 1]):
+            beginningDistance2X = calculate_distance(X_point3[i], X_point4[i], 0, 0)
+            beginningDistance2Y = calculate_distance(0, 0, Y_point3[i], Y_point4[i])
+        if i==min(indexEndReach, num_points-1) and i>0 and pd.notna(X_point1[i]) and pd.notna(Y_point1[i]) and pd.notna(X_point1[i - 1]) and pd.notna(Y_point1[i - 1]):
             endDistanceX = calculate_distance(X_point1[i], X_point2[i], 0, 0)
             endDistanceY = calculate_distance(0, 0, Y_point1[i], Y_point2[i])
             print(f"Wrist X distance at end: {endDistanceX}")
             print(f"Wrist Y distance at end: {endDistanceY}")
+            endDistance2X = calculate_distance(X_point3[i], X_point4[i], 0, 0)
+            endDistance2Y = calculate_distance(0, 0, Y_point3[i], Y_point4[i])
 
+        if i > 0 and pd.notna(X_point1[i]) and pd.notna(Y_point1[i]):# and pd.notna(X_point1[i - 1]) and pd.notna(Y_point1[i - 1]):
+            angle_deg = calculate_rotation_angle(
+                X_point1[indexBeginningMvt], Y_point1[indexBeginningMvt],
+                X_point2[indexBeginningMvt], Y_point2[indexBeginningMvt],
+                X_point1[i], Y_point1[i],
+                X_point2[i], Y_point2[i]
+            )
+            if angle_deg is not None:
+                print(f"Rotation angle at index {i}: {angle_deg} degrees")
+            else:
+                print(f"Invalid vectors at index {i}, cannot compute angle.")
+
+        if i > 0 and pd.notna(X_point3[i]) and pd.notna(Y_point3[i]):
+            angle_deg2 = calculate_rotation_angle(
+                X_point3[indexBeginningMvt], Y_point3[indexBeginningMvt],
+                X_point4[indexBeginningMvt], Y_point4[indexBeginningMvt],
+                X_point3[i], Y_point3[i],
+                X_point4[i], Y_point4[i]
+            )
     # Sauvegarde dans resultats
     results.append({
         'Wrist X distance at the beginning': beginningDistanceX,
         'Wrist X distance at the end': endDistanceX,
         'Wrist Y distance at the beginning': beginningDistanceY,
         'Wrist Y distance at the end': endDistanceY,
+        'Rotation angle': angle_deg,
+        'Knuckle X distance at the beginning': beginningDistance2X,
+        'Knuckle X distance at the end': endDistance2X,
+        'Knuckle Y distance at the beginning': beginningDistance2Y,
+        'Knuckle Y distance at the end': endDistance2Y,
+        'Rotation angle using knuckles': angle_deg2,
         'Knuckles position at the beginning': (X_point1[indexBeginningMvt], Y_point1[indexBeginningMvt], X_point2[indexBeginningMvt], Y_point2[indexBeginningMvt]),
-        'Hand reaching': yaml_data.get('param', {}).get('main', 'Unknown')
+        'Hand reaching': yaml_data.get('param', {}).get('main', 'Unknown'),
+        'angle of reach': yaml_data.get('param', {}).get('angles', 'Unknown')
     })   
 
 # Test of the trajectory length function 
 #get_mvtTime_yaml(0, 100)
 all_trials = []
-for i in range(50):
+for i in range(100):
     wrist_distance(i, i+1, csv_data_path[0])
 
 # Sauvegarde des resultats dans fichier csv

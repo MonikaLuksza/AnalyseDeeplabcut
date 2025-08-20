@@ -258,7 +258,7 @@ def grasp_distance(index1, index2, csv_file):
     first_yaml_file = yaml_baseline_path[0]
     with open(first_yaml_file, "r") as file:
         yaml_data = yaml.safe_load(file)
-        timeBeginningVideo = conversion_date_in_seconds(yaml_data.get('date').split('@')[1]) #+ 6.9804       #Adjust according to delay between recording and camera start
+        timeBeginningVideo = conversion_date_in_seconds(yaml_data.get('date').split('@')[1]) 
         print (f"Video start time: {timeBeginningVideo}")
 
     for yaml_file in yaml_baseline_path[index1:index2]:
@@ -266,7 +266,7 @@ def grasp_distance(index1, index2, csv_file):
             yaml_data = yaml.safe_load(file)
 
     if (get_oneMvtTime_yaml(index1, index2)[1] is not None):
-        timeBeginningMvt = conversion_date_in_seconds(get_oneMvtTime_yaml(index1, index2)[0]) + 6.9804
+        timeBeginningMvt = conversion_date_in_seconds(get_oneMvtTime_yaml(index1, index2)[0]) #+ 3.6626
         print(f"Time of the beginning of movement: {timeBeginningMvt}")
         timeBeginningGrasp = timeBeginningMvt + float((yaml_data.get('matlab_data', {}).get('exitHP', 'Unknown'))/1000)
         print(f"Time of the beginning of grasp: {timeBeginningGrasp}")
@@ -349,7 +349,7 @@ def grasp_distance(index1, index2, csv_file):
         Z_point3 = None
         Z_point4 = None
 
-    for i in range(indexBeginningGrasp + 1, indexEndGrasp):
+    for i in range(indexBeginningGrasp, indexEndGrasp+1):
         if i > 0 and pd.notna(X_point1[i]) and pd.notna(Y_point1[i]) and pd.notna(X_point1[i - 1]) and pd.notna(Y_point1[i - 1]):
             z1 = Z_point1[i] if 'Z_point1' in locals() and Z_point1 is not None else None
             z2 = Z_point2[i] if 'Z_point2' in locals() and Z_point2 is not None else None
@@ -391,6 +391,13 @@ def grasp_distance(index1, index2, csv_file):
 
     # Sauvegarde dans resultats
     results.append({
+        'csv_file': Path(csv_file).name,
+        'state': yaml_data.get('matlab_data', {}).get('state', 'Unknown'), 
+        'grasping_start_index': indexBeginningGrasp,
+        'grasping_end_index': indexEndGrasp,
+        'start_time': timeBeginningMvt - timeBeginningVideo,
+        'end_time': timeEndGrasp - timeBeginningVideo,
+        'duration_s': timeMvt,
         'Grasping distance': averageDistance,
         'Grasping angle using wrist': angleSummaryWrist,
         'Grasping angle using thumb': angleSummaryThumb,
@@ -424,10 +431,10 @@ if __name__ == "__main__":
 
     # Sauvegarde des resultats dans fichier csv
     results_df = pd.DataFrame(results)
-    output_csv_path = Path(project_folder) / "ANGLE_PoST_wristandthumb.csv"
+    output_csv_path = Path(project_folder) / "ANGLE_wristandthumb_pre.csv"
     results_df.to_csv(output_csv_path, index=False)
     print(f"Saving...: {output_csv_path}")
     grasp_distances_df = pd.DataFrame(grasp_distances)
-    grasp_distances_output_path = Path(project_folder) / "grasp_distances.csv"
+    grasp_distances_output_path = Path(project_folder) / "grasp_distances_pre.csv"
     grasp_distances_df.to_csv(grasp_distances_output_path, index=False)
     print(f"Grasp distances saved to: {grasp_distances_output_path}")
