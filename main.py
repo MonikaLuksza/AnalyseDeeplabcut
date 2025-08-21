@@ -105,7 +105,7 @@ def get_oneMvtTime_yaml(index1=0, index2=1):
             yaml_data = yaml.safe_load(file)
             
         heureMvt = yaml_data.get('date').split('@')[1]
-        totalMvtTime = float(yaml_data.get('matlab_data', {}).get('grasp_offset', 0)) #+ int(yaml_data.get('matlab_data', {}).get('delayReward', 0))
+        totalMvtTime = float(yaml_data.get('matlab_data', {}).get('grasp_onset', 0)) #+ int(yaml_data.get('matlab_data', {}).get('delayReward', 0))
         if totalMvtTime == 0:
             totalMvt = get_oneMvtTime_yaml(index1+1, index2+1)[0] 
             print(f"Total movement time: {totalMvt}")
@@ -142,7 +142,7 @@ def trajectory_one_movement(index1, index2, csv_file, cote) :
             yaml_data = yaml.safe_load(file)
 
     if (get_oneMvtTime_yaml(index1, index2)[1] is not None):
-        tempsDebutMvt = conversion_date_in_seconds(get_oneMvtTime_yaml(index1, index2)[0]) #+ 3.6626
+        tempsDebutMvt = conversion_date_in_seconds(get_oneMvtTime_yaml(index1, index2)[0]) + 3.6626
         print(f"Time of beginning of movement: {tempsDebutMvt}")
         print(f"Time of beginning of movement in seconds: {tempsDebutMvt - tempsDebutVideo}")
         tempsFinMvt = get_oneMvtTime_yaml(index1, index2)[1] + tempsDebutMvt
@@ -154,6 +154,9 @@ def trajectory_one_movement(index1, index2, csv_file, cote) :
         print(f"Index of beginning of movement: {indexDebutMvt}")
         indexFinMvt = int((tempsMvt) * 10) + indexDebutMvt
         print(f"Index of end of movement: {indexFinMvt}")
+
+        tempsFinReach = tempsDebutMvt + float((yaml_data.get('matlab_data', {}).get('grasp_onset', 'Unknown'))/1000)
+        indexEndReach = int((tempsFinReach - tempsDebutVideo) * 10)
     else:
         print("No valid movement time found in the YAML file.")
         
@@ -198,7 +201,7 @@ def trajectory_one_movement(index1, index2, csv_file, cote) :
                 print(f"Distance between points: {distance}")
                 mvtDistance += distance
 
-                if i == indexFinMvt:
+                if i == (indexEndReach-1):
                     if z_curr is not None:
                         emplacementFinalIndex = (x_curr, y_curr, z_curr)
                     else:
@@ -412,9 +415,9 @@ if __name__ == "__main__":
     all_trials = []
     grasp_distances = []
     for i in range(100):
-        #trajectory_one_movement(i, i+1, csv_data_path[0], 'L')  
-        #trajectory_one_movement(i, i+1, csv_data_path[0], 'R')
-        grasp_distance(i, i+1, csv_data_path[0])
+        trajectory_one_movement(i, i+1, csv_data_path[0], 'L')  
+        trajectory_one_movement(i, i+1, csv_data_path[0], 'R')
+        #grasp_distance(i, i+1, csv_data_path[0])
 
 #For figure plotting
     #all_trials.append(speeds)
@@ -431,10 +434,10 @@ if __name__ == "__main__":
 
     # Sauvegarde des resultats dans fichier csv
     results_df = pd.DataFrame(results)
-    output_csv_path = Path(project_folder) / "ANGLE_wristandthumb_pre.csv"
+    output_csv_path = Path(project_folder) / "main.csv"
     results_df.to_csv(output_csv_path, index=False)
     print(f"Saving...: {output_csv_path}")
-    grasp_distances_df = pd.DataFrame(grasp_distances)
-    grasp_distances_output_path = Path(project_folder) / "grasp_distances_pre.csv"
-    grasp_distances_df.to_csv(grasp_distances_output_path, index=False)
-    print(f"Grasp distances saved to: {grasp_distances_output_path}")
+    #grasp_distances_df = pd.DataFrame(grasp_distances)
+    #grasp_distances_output_path = Path(project_folder) / "grasp_distances_pre.csv"
+    #grasp_distances_df.to_csv(grasp_distances_output_path, index=False)
+    #print(f"Grasp distances saved to: {grasp_distances_output_path}")

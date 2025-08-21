@@ -106,7 +106,7 @@ def wrist_distance(index1, index2, csv_file):
             yaml_data = yaml.safe_load(file)
 
     if (get_oneMvtTime_yaml(index1, index2)[1] is not None):
-        timeBeginningMvt = conversion_date_in_seconds(get_oneMvtTime_yaml(index1, index2)[0])
+        timeBeginningMvt = conversion_date_in_seconds(get_oneMvtTime_yaml(index1, index2)[0]) #+ 3.6626
         timeEndMvt = get_oneMvtTime_yaml(index1, index2)[1] + timeBeginningMvt
         timeMvt = timeEndMvt - timeBeginningMvt
 
@@ -114,8 +114,9 @@ def wrist_distance(index1, index2, csv_file):
         print("No valid movement time found in the YAML file.")
 
     # Read the CSV file
-    position_data = pd.read_csv(csv_file, header=[0, 1, 2], low_memory=False)
-    position_data.columns = [f"{bp}_{coord}" for _, bp, coord in position_data.columns.to_flat_index()]
+    #position_data = pd.read_csv(csv_file, header=[0, 1, 2], low_memory=False)
+    position_data = pd.read_csv(csv_file, header=0, low_memory=False)
+    #position_data.columns = [f"{bp}_{coord}" for _, bp, coord in position_data.columns.to_flat_index()]
     handUsed = yaml_data.get('param', {}).get('main', 'Unknown')
     if handUsed == 'LEFT':
         x_col = 'wrist1L_x'
@@ -202,6 +203,10 @@ def wrist_distance(index1, index2, csv_file):
             )
     # Sauvegarde dans resultats
     results.append({
+        'movement_start_index': indexBeginningMvt,
+        'movement_end_index': indexEndMvt,
+        'start_time': timeBeginningMvt - timeBeginningVideo,
+        'end_time': timeEndMvt - timeBeginningVideo,
         'Wrist X distance at the beginning': beginningDistanceX,
         'Wrist X distance at the end': endDistanceX,
         'Wrist Y distance at the beginning': beginningDistanceY,
@@ -225,6 +230,6 @@ for i in range(100):
 
 # Sauvegarde des resultats dans fichier csv
 results_df = pd.DataFrame(results)
-output_csv_path = Path(project_folder) / "WRIST_DATA.csv"
+output_csv_path = Path(project_folder) / "WRIST_DATA_xyz.csv"
 results_df.to_csv(output_csv_path, index=False)
 print(f"Saving...: {output_csv_path}")
