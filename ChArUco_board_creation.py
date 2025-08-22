@@ -54,7 +54,3 @@ if __name__ == "__main__":
     # Save and optionally display
     cv2.imwrite("charuco_board.png", img)
     print("Saved charuco_board.png")
-    # Uncomment to show window
-    # cv2.imshow("ChArUco Board", img)
-    # cv2.waitKey(0)
-    # cv2.destroyAllWindows()

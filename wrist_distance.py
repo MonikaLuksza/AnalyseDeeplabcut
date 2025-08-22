@@ -46,7 +46,7 @@ def calculate_rotation_angle(x1_start, y1_start, x2_start, y2_start,
 
     # Avoid division by zero
     if magnitude_start == 0 or magnitude_end == 0:
-        return None  # Invalid vectors
+        return None  
 
     # Clamp to avoid math domain error
     cos_theta = max(min(dot_product / (magnitude_start * magnitude_end), 1.0), -1.0)
@@ -56,7 +56,7 @@ def calculate_rotation_angle(x1_start, y1_start, x2_start, y2_start,
 
     # Determine direction using cross product
     if cross_product < 0:
-        angle_deg = -angle_deg  # Clockwise
+        angle_deg = -angle_deg  
 
     return angle_deg 
 
@@ -69,8 +69,7 @@ def get_oneMvtTime_yaml(index1=0, index2=1):
             yaml_data = yaml.safe_load(file)
             
         heureMvt = yaml_data.get('date').split('@')[1]
-        totalMvtTime = float(yaml_data.get('matlab_data', {}).get('grasp_onset', 0)) #+ int(yaml_data.get('matlab_data', {}).get('delayReward', 0))
-
+        totalMvtTime = float(yaml_data.get('matlab_data', {}).get('grasp_onset', 0)) 
         if (yaml_data.get('matlab_data', {}).get('state') !=0):
             return heureMvt, float(totalMvtTime/1000)
         else :
@@ -113,7 +112,7 @@ def wrist_distance(index1, index2, csv_file):
     else:
         print("No valid movement time found in the YAML file.")
 
-    # Read the CSV file
+    # Read the CSV file. Uncomment if you want to use the xy coordinates from the top camera instead of the xyz coordinates of all three cameras
     #position_data = pd.read_csv(csv_file, header=[0, 1, 2], low_memory=False)
     position_data = pd.read_csv(csv_file, header=0, low_memory=False)
     #position_data.columns = [f"{bp}_{coord}" for _, bp, coord in position_data.columns.to_flat_index()]
@@ -154,6 +153,7 @@ def wrist_distance(index1, index2, csv_file):
     X_point4 = position_data[x4_col]
     Y_point4 = position_data[y4_col]
 
+    # The time considered for the distances is the time of reach (exitHP until grasp_onset). Change lines timeBeginningReach and timeEndReach to change so. 
     if timeBeginningMvt != 0:
         indexBeginningMvt = int((timeBeginningMvt-timeBeginningVideo) * 10)
         print(f"Index of beginning of movement: {indexBeginningMvt}")
@@ -182,7 +182,8 @@ def wrist_distance(index1, index2, csv_file):
             endDistance2X = calculate_distance(X_point3[i], X_point4[i], 0, 0)
             endDistance2Y = calculate_distance(0, 0, Y_point3[i], Y_point4[i])
 
-        if i > 0 and pd.notna(X_point1[i]) and pd.notna(Y_point1[i]):# and pd.notna(X_point1[i - 1]) and pd.notna(Y_point1[i - 1]):
+        # Calculate rotation angle using the wrist points
+        if i > 0 and pd.notna(X_point1[i]) and pd.notna(Y_point1[i]):
             angle_deg = calculate_rotation_angle(
                 X_point1[indexBeginningMvt], Y_point1[indexBeginningMvt],
                 X_point2[indexBeginningMvt], Y_point2[indexBeginningMvt],
@@ -194,6 +195,7 @@ def wrist_distance(index1, index2, csv_file):
             else:
                 print(f"Invalid vectors at index {i}, cannot compute angle.")
 
+        # Calculate rotation angle using the knuckle points
         if i > 0 and pd.notna(X_point3[i]) and pd.notna(Y_point3[i]):
             angle_deg2 = calculate_rotation_angle(
                 X_point3[indexBeginningMvt], Y_point3[indexBeginningMvt],
@@ -211,19 +213,18 @@ def wrist_distance(index1, index2, csv_file):
         'Wrist X distance at the end': endDistanceX,
         'Wrist Y distance at the beginning': beginningDistanceY,
         'Wrist Y distance at the end': endDistanceY,
-        'Rotation angle': angle_deg,
+        'Rotation angle using the wrist points': angle_deg,
         'Knuckle X distance at the beginning': beginningDistance2X,
         'Knuckle X distance at the end': endDistance2X,
         'Knuckle Y distance at the beginning': beginningDistance2Y,
         'Knuckle Y distance at the end': endDistance2Y,
-        'Rotation angle using knuckles': angle_deg2,
+        'Rotation angle using the knuckles points': angle_deg2,
         'Knuckles position at the beginning': (X_point1[indexBeginningMvt], Y_point1[indexBeginningMvt], X_point2[indexBeginningMvt], Y_point2[indexBeginningMvt]),
         'Hand reaching': yaml_data.get('param', {}).get('main', 'Unknown'),
         'angle of reach': yaml_data.get('param', {}).get('angles', 'Unknown')
     })   
 
-# Test of the trajectory length function 
-#get_mvtTime_yaml(0, 100)
+# Results for first 100 trials
 all_trials = []
 for i in range(100):
     wrist_distance(i, i+1, csv_data_path[0])

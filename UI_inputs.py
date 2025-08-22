@@ -1,13 +1,17 @@
+# Code for the user interface to get input paths and labels for the project
 from pathlib import Path
 import tkinter as tk
 from tkinter import simpledialog, filedialog, messagebox
 
+# These paths are default. If you chose to use the GUI, they will be overwritten.
+# Change if you change the place of your project
 config_path = Path("C:/Users/Usagers/Project1-Monika-2025-05-07") 
+# Change if you change the place of your baseline data
 baseline_data_path = Path("//LaboDancauseDS/LabData/DANCN31/D/Machu/Baseline/TaskData/")
 
 def get_user_input():
     root = tk.Tk()
-    root.withdraw()  # Hide the main window
+    root.withdraw()
 
     # Initial prompt
     messagebox.showinfo(title="Instructions", message="Select the folder of the project (1), the videos (2) and csv data (3) you would like to analyze. \nNext input the labels that were used in the videos (4).\n\nIf you not, default paths and labels will be used.")
@@ -17,14 +21,6 @@ def get_user_input():
     if not project_folder:
         print("No folder selected for project: using default path")
         project_folder = config_path
-
-    # Prompt for video folder
-    #video_folder = filedialog.askdirectory(title="Select Videos Folder")
-    #if not video_folder:
-    #    print("No folder selected for videos: using default path")
-    #    video_folder = config_path / "videos"
-    #else: 
-    #    video_folder = Path(video_folder)
 
     # Prompt for CSV folder
     csv_folder = filedialog.askdirectory(title="Select CSV Data Folder")

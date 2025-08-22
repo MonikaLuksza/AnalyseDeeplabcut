@@ -32,7 +32,7 @@ failure_trials_0_L = 0
 success_trials_0_R = 0
 failure_trials_0_R = 0
 
-# --- Processing YAML Files ---
+# Processing YAML Files
 # Function to extract hand and angle from YAML data
 def get_hand_and_angle(yaml_file):
     with open(yaml_file, "r") as file:
@@ -108,7 +108,7 @@ for idx, yaml_file in enumerate(yaml_baseline_path):
                 failure_trials_0_R += 1
                 print(f"Failure trial for RIGHT hand at 0°: {yaml_file.name}")
 
-# --- Summing up and Plotting ---
+
 # Total success and failure trials for each condition
 success_L = [success_trials_135_L, success_trials_90_L, success_trials_45_L, success_trials_0_L]
 failure_L = [failure_trials_135_L, failure_trials_90_L, failure_trials_45_L, failure_trials_0_L]
