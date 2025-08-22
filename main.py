@@ -12,8 +12,6 @@ results = []
 project_folder, csv_folder, yaml_folder, labels = get_user_input()
 
 # Relevant paths
-# Should I just load one video at a time?
-#video_path = list(video_folder.rglob("*.avi"))
 csv_data_path = list(csv_folder.rglob("*.csv"))
 
 # Relevant paths specific to Machu trials: pre and post lesion
@@ -23,14 +21,7 @@ yaml_baseline_path = list(baseline_data_path.rglob("*.yaml"))
 postlesion_data_path = Path("//LaboDancauseDS/LabData/DANCN31/D/Machu/PostLesion/Task/")
 yaml_postlesion_path = list(postlesion_data_path.rglob("*.yaml"))  
 
-#Function to test the validity of the paths
-def path_test():
-# Test if paths are correct
-    for csv_path in csv_data_path:
-        print(csv_path)
-        position_data = pd.read_csv(csv_path, header=0)
-        print(position_data)
-path_test()
+
 #Function to convert the date from the yaml file into seconds
 def conversion_date_in_seconds(date):
     date_str = str(date)
@@ -77,25 +68,6 @@ def calculate_angle(X_point1, X_point2, X_point3,
     else:
         return 0  
   
-
-# Function to get the movement time of multiple movements from yaml files
-def get_mvtTime_yaml(index1=0, index2=100): 
-    mvtNumber = 0
-    heureMvt = 0
-
-    for yaml_file in yaml_baseline_path[index1:index2]:
-        with open(yaml_file, "r") as file:
-            yaml_data = yaml.safe_load(file)
-        
-        heureMvt = yaml_data.get('date').split('@')[1]
-        totalMvtTime = float(yaml_data.get('matlab_data', {}).get('grasp_offset', 0)) 
-        mvtNumber += 1
-        if (yaml_data.get('matlab_data', {}).get('state') !=0):
-            
-            print(f"{heureMvt} Total {yaml_data.get('param', {}).get('main')} hand movement time (movement number: {mvtNumber}): {totalMvtTime} miliseconds")
-        else :
-            print(f"{heureMvt} Total {yaml_data.get('param', {}).get('main')} hand movement time (movement number: {mvtNumber}): ---")
-
 # Function to get the time of one movement from yaml files
 def get_oneMvtTime_yaml(index1=0, index2=1): 
     heureMvt = 0
@@ -105,7 +77,7 @@ def get_oneMvtTime_yaml(index1=0, index2=1):
             yaml_data = yaml.safe_load(file)
             
         heureMvt = yaml_data.get('date').split('@')[1]
-        totalMvtTime = float(yaml_data.get('matlab_data', {}).get('grasp_onset', 0)) #+ int(yaml_data.get('matlab_data', {}).get('delayReward', 0))
+        totalMvtTime = float(yaml_data.get('matlab_data', {}).get('grasp_onset', 0)) 
         if totalMvtTime == 0:
             totalMvt = get_oneMvtTime_yaml(index1+1, index2+1)[0] 
             print(f"Total movement time: {totalMvt}")
@@ -113,10 +85,6 @@ def get_oneMvtTime_yaml(index1=0, index2=1):
             print(conversion_date_in_seconds(heureMvt))
             totalMvtTime = (conversion_date_in_seconds(totalMvt) - conversion_date_in_seconds(heureMvt))*1000
         return heureMvt, float(totalMvtTime/1000)
-        #if (yaml_data.get('matlab_data', {}).get('state') !=0):
-        #    return heureMvt, float(totalMvtTime/1000)
-        #else :
-          #  return heureMvt, None
 
 #Function to calculate the trajectory length of one movement
 def trajectory_one_movement(index1, index2, csv_file, cote) :  
@@ -142,7 +110,7 @@ def trajectory_one_movement(index1, index2, csv_file, cote) :
             yaml_data = yaml.safe_load(file)
 
     if (get_oneMvtTime_yaml(index1, index2)[1] is not None):
-        tempsDebutMvt = conversion_date_in_seconds(get_oneMvtTime_yaml(index1, index2)[0]) + 3.6626
+        tempsDebutMvt = conversion_date_in_seconds(get_oneMvtTime_yaml(index1, index2)[0]) #+ 3.6626
         print(f"Time of beginning of movement: {tempsDebutMvt}")
         print(f"Time of beginning of movement in seconds: {tempsDebutMvt - tempsDebutVideo}")
         tempsFinMvt = get_oneMvtTime_yaml(index1, index2)[1] + tempsDebutMvt
@@ -411,7 +379,8 @@ def grasp_distance(index1, index2, csv_file):
 
 
 if __name__ == "__main__": 
-    # Test of the trajectory length function if main.py is explicitly called 
+    # Make sure to comment lines 388, 395-398 when using trajectory_one_movement
+    # Make sure to comment 387 and 388 when using grasp_distance 
     all_trials = []
     grasp_distances = []
     for i in range(100):
@@ -419,20 +388,7 @@ if __name__ == "__main__":
         trajectory_one_movement(i, i+1, csv_data_path[0], 'R')
         #grasp_distance(i, i+1, csv_data_path[0])
 
-#For figure plotting
-    #all_trials.append(speeds)
-
-# for i, trial in enumerate(all_trials):
-#    plt.plot(range(len(trial)), trial, label=f'Trial {i+1}')
-
-#plt.xlabel('Index')
-#plt.ylabel('Speed')
-#plt.title('Per-Index Distance Across Multiple Trials')
-#plt.legend()
-#plt.grid(True)
-#plt.show()
-
-    # Sauvegarde des resultats dans fichier csv
+    # Saving the results in a csv. The csv will be in your chosen project folder
     results_df = pd.DataFrame(results)
     output_csv_path = Path(project_folder) / "main.csv"
     results_df.to_csv(output_csv_path, index=False)
